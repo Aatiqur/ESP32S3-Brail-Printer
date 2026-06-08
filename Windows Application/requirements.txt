@@ -1,0 +1,4 @@
+flask==2.3.3
+pyserial==3.5
+PyQt5==5.15.9
+pyttsx3==2.90

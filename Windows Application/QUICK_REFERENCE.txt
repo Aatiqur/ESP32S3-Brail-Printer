@@ -1,0 +1,288 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                                                                            ║
+║     SINC ROBOTICS BRAILLE EMBOSSER - QUICK REFERENCE CARD                ║
+║                                                                            ║
+║                    Everything You Need to Know (1 page)                  ║
+║                                                                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+
+🚀 INSTANT START:
+════════════════════════════════════════════════════════════════════════════
+
+1. Double-click → SINC_ROBOTICS_Braille_Embosser.bat
+2. Browser opens automatically
+3. Start using immediately!
+
+
+📋 WHAT YOU NEED (Before First Use):
+════════════════════════════════════════════════════════════════════════════
+
+☑ Python 3.7+       (Download: https://www.python.org/)
+☑ Arduino Uno       (with CNC Shield)
+☑ USB Cable         (Arduino to Computer)
+☑ Stepper Motors    (NEMA 17, for X & Y axes)
+☑ 24V Solenoid      (Electromagnet for punching)
+
+
+📁 KEY FILES:
+════════════════════════════════════════════════════════════════════════════
+
+MAIN LAUNCHER:
+→ SINC_ROBOTICS_Braille_Embosser.bat    (Double-click this!)
+
+CORE FILES:
+→ run_app.py                            (Python launcher)
+→ app.py                                (Backend logic)
+→ index.html                            (Web interface)
+→ arduin.txt                            (Arduino code)
+
+DOCUMENTATION:
+→ README.md                             (Full manual)
+→ SETUP_GUIDE.txt                       (Setup steps)
+→ APP_INFO.json                         (Metadata)
+
+TOOLS:
+→ INSTALL_DEPENDENCIES.bat              (Install packages)
+→ requirements.txt                      (Package list)
+
+
+⌨️ HOW TO USE (Main Interface):
+════════════════════════════════════════════════════════════════════════════
+
+1. Type text in textarea (Bangla or English)
+2. See live preview on the right
+3. Check "Poetry" box if needed
+4. Click "Print Braille" button
+5. Status shows progress
+6. Done! ✅
+
+Buttons:
+  🔍 Preview Braille    - See Braille representation
+  🔊 Read Aloud         - Text-to-Speech
+  🖨️  Print Braille     - Send to Arduino (auto-detects single/multi)
+
+
+🎯 SMART FEATURES:
+════════════════════════════════════════════════════════════════════════════
+
+✓ Auto-detects single vs multiple lines
+✓ Auto-connects to Arduino
+✓ Auto-installs missing packages
+✓ Auto-opens browser
+✓ Real-time preview
+✓ Support for Bangla, English, Numbers
+✓ Poetry mode formatting
+✓ Text-to-Speech in Bengali/English
+✓ Beautiful dark UI
+✓ Mobile-responsive design
+
+
+🔧 SETUP (First Time Only):
+════════════════════════════════════════════════════════════════════════════
+
+Step 1: Install Python
+  → Download: https://www.python.org/
+  → During install: CHECK "Add Python to PATH"
+  → Restart computer
+
+Step 2: Upload Arduino Code
+  → Open Arduino IDE
+  → Load: arduin.txt (copy & paste into IDE)
+  → Select: Board → Arduino Uno
+  → Select: Port → COM port with Arduino
+  → Click: Upload
+
+Step 3: Install Packages (auto or manual)
+  → Option A: Double-click INSTALL_DEPENDENCIES.bat
+  → Option B: Run: pip install flask pyserial
+
+Step 4: First Launch
+  → Double-click: SINC_ROBOTICS_Braille_Embosser.bat
+  → Everything works!
+
+
+💬 STATUS MESSAGES:
+════════════════════════════════════════════════════════════════════════════
+
+✅ Print completed successfully     → Success!
+✅ Done                              → Completed
+✅ Printing complete! (3/3 lines)   → Multi-line success
+❌ Offline                           → Arduino not connected
+❌ Print Error                       → Something went wrong
+⚠️ Timeout                           → Communication timeout
+ℹ️ System ready                      → App is initialized
+
+
+🆘 QUICK TROUBLESHOOTING:
+════════════════════════════════════════════════════════════════════════════
+
+"Python not found"
+  → Install Python from https://www.python.org/
+  → Make sure to check "Add Python to PATH"
+  → RESTART computer after installation
+
+"Arduino offline / not detected"
+  → Check USB connection
+  → Make sure Arduino code is uploaded (using Arduino IDE)
+  → Check Device Manager for COM port number
+  → Install CH340 drivers if needed
+
+"Nothing prints after clicking Print"
+  → Check Arduino USB connection
+  → Open browser console (F12) for error messages
+  → Check Arduino IDE serial monitor for Arduino feedback
+  → Verify stepper motor connections
+
+"Browser won't open automatically"
+  → Check port 5000 is not in use
+  → Manually visit: http://127.0.0.1:5000
+  → OR: http://localhost:5000
+
+"Port 5000 in use"
+  → Close other applications using port 5000
+  → OR edit app.py line 329: change port=5000 to port=5001
+
+For more help:
+  → Read README.md (comprehensive)
+  → Read SETUP_GUIDE.txt (detailed)
+
+
+🌐 WEB INTERFACE:
+════════════════════════════════════════════════════════════════════════════
+
+URL: http://127.0.0.1:5000
+     or http://localhost:5000
+
+Left Side:
+  • Text input area (type here)
+  • Poetry mode checkbox
+  • 3 buttons (Preview, Read Aloud, Print)
+
+Right Side:
+  • Live Braille preview
+  • Updated as you type
+  • Shows line breaks
+
+Bottom:
+  • Status messages
+  • Error indicators
+  • Progress display
+
+
+🔌 HARDWARE CONNECTIONS:
+════════════════════════════════════════════════════════════════════════════
+
+Arduino Pins (CNC Shield):
+  X-axis stepper  → X pins (Pin 2, 5)
+  Y-axis stepper  → Y pins (Pin 3, 6)
+  Solenoid        → Pin 9
+  Enable          → Pin 8
+  GND             → Ground (multiple)
+
+USB:
+  Arduino USB-B   → Computer USB port
+
+Power:
+  12V-24V supply  → CNC Shield input
+  GND             → Connected to Arduino GND
+
+
+📊 SPECIFICATIONS:
+════════════════════════════════════════════════════════════════════════════
+
+Baud Rate: 115200 bps
+Max Cells/Row: 20 cells
+Max Rows: 25 rows
+Line Spacing: 5.0 mm
+Cell Spacing: 3.5 mm
+Dot Spacing: 2.5 mm
+
+Languages:
+  ✓ Bengali (বাংলা) - Full support
+  ✓ English (A-Z, a-z) - Full support
+  ✓ Numbers (0-9, ০-৯) - Full support
+
+
+⏱️ TIMING:
+════════════════════════════════════════════════════════════════════════════
+
+Single Line Print: 5-10 seconds
+Per Additional Line: 5-10 seconds each
+Arduino Boot: 2 seconds
+Browser Load: 1-2 seconds
+Total Startup: 5-10 seconds
+
+
+🎓 LEARNING:
+════════════════════════════════════════════════════════════════════════════
+
+For Users:
+  → Start with: SETUP_GUIDE.txt
+  → Then read: README.md
+  → Use: In-app help (status messages)
+
+For Developers:
+  → Read: README.md (overview)
+  → Study: app.py (backend logic)
+  → Review: index.html (frontend)
+  → Check: arduin.txt (Arduino code)
+
+For Customization:
+  → Modify app.py for logic changes
+  → Edit index.html for UI changes
+  → Update arduin.txt for hardware behavior
+  → Restart app for changes to take effect
+
+
+✅ CHECKLIST BEFORE USE:
+════════════════════════════════════════════════════════════════════════════
+
+□ Python 3.7+ installed
+□ Python added to PATH
+□ Arduino Uno connected via USB
+□ Arduino code uploaded
+□ All application files in one directory
+□ No other apps using port 5000
+□ CH340 drivers installed (if needed)
+□ Flask & PySerial installed
+
+
+🎯 SUPPORT RESOURCES:
+════════════════════════════════════════════════════════════════════════════
+
+In Files:
+  • README.md - Complete documentation
+  • SETUP_GUIDE.txt - Step-by-step guide
+  • APP_INFO.json - Technical info
+  • FILES_LISTING.txt - Detailed file descriptions
+
+In Application:
+  • Status messages - Real-time feedback
+  • Error descriptions - What went wrong
+  • Browser console (F12) - Technical details
+
+
+📞 STILL NEED HELP?
+════════════════════════════════════════════════════════════════════════════
+
+1. Check: SETUP_GUIDE.txt → Troubleshooting section
+2. Read: README.md → Complete documentation
+3. Verify: All files in same directory
+4. Ensure: Python & Arduino are properly installed
+5. Check: Browser console (F12) for errors
+
+
+═══════════════════════════════════════════════════════════════════════════
+
+🎉 That's it! Everything is ready to use. 
+
+Just double-click and enjoy printing in Braille!
+
+═══════════════════════════════════════════════════════════════════════════
+
+Version: 1.0.0
+Status: ✅ PRODUCTION READY
+Last Updated: December 10, 2025
+
+═══════════════════════════════════════════════════════════════════════════

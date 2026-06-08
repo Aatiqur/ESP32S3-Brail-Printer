@@ -1,0 +1,241 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                                                                            ║
+║           🖨️  SINC ROBOTICS - BRAILLE EMBOSSER DESKTOP APP 🖨️            ║
+║                          COMPLETE SETUP GUIDE                            ║
+║                                                                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+QUICK START (If you already have Python installed):
+═══════════════════════════════════════════════════════════════════════════
+
+Step 1: Double-click → SINC_ROBOTICS_Braille_Embosser.bat
+Step 2: Wait for browser to open
+Step 3: Start printing!
+
+═══════════════════════════════════════════════════════════════════════════
+
+COMPLETE SETUP (First Time):
+═══════════════════════════════════════════════════════════════════════════
+
+STEP 1: INSTALL PYTHON (If not already installed)
+─────────────────────────────────────────────────
+
+1.1 Visit: https://www.python.org/downloads/
+1.2 Download Python 3.10 or newer (Windows installer)
+1.3 Run the installer
+1.4 ⚠️ IMPORTANT: Check the box "Add Python to PATH"
+1.5 Click "Install Now"
+1.6 Wait for installation to complete
+1.7 RESTART your computer
+
+Verify Python is installed:
+  → Open Command Prompt
+  → Type: python --version
+  → Should show version number (e.g., Python 3.10.0)
+
+STEP 2: INSTALL REQUIRED PACKAGES
+──────────────────────────────────
+
+Option A: Automatic (Easiest)
+  → Double-click: INSTALL_DEPENDENCIES.bat
+  → Let it complete
+  → Press any key when done
+
+Option B: Manual
+  → Open Command Prompt
+  → Navigate to this folder:
+    cd C:\Users\YourUsername\OneDrive\Desktop\habijabi
+  → Run:
+    pip install flask pyserial
+
+STEP 3: ARDUINO SETUP
+─────────────────────
+
+3.1 Download Arduino IDE: https://www.arduino.cc/en/software
+3.2 Install Arduino IDE
+3.3 Open Arduino IDE
+3.4 Install CH340 drivers (for CNC Shield):
+    → Board Manager → Search "CH340"
+    → Install "CH340 by WCHnet"
+3.5 Load the Arduino code:
+    → Open file: arduin.txt in this folder
+    → Copy all content
+    → Paste in Arduino IDE
+    → OR use: File → Open → arduin.txt
+3.6 Connect Arduino via USB
+3.7 Select: Tools → Board → Arduino Uno
+3.8 Select: Tools → Port → COM port (e.g., COM3)
+3.9 Click Upload button (→)
+3.10 Wait for "Done uploading" message
+
+STEP 4: RUN THE APPLICATION
+──────────────────────────
+
+Option A: Quick Launch (Recommended)
+  → Double-click: SINC_ROBOTICS_Braille_Embosser.bat
+  → Browser opens automatically
+  → Application is ready!
+
+Option B: From Command Prompt
+  → Open Command Prompt
+  → Navigate to this folder
+  → Run: python run_app.py
+  → Open browser to: http://127.0.0.1:5000
+
+═══════════════════════════════════════════════════════════════════════════
+
+TROUBLESHOOTING:
+═══════════════════════════════════════════════════════════════════════════
+
+❌ "Python is not installed or not in PATH"
+   ✓ Install Python from https://www.python.org/
+   ✓ During installation, CHECK "Add Python to PATH"
+   ✓ RESTART your computer after installation
+   ✓ Open new Command Prompt and type: python --version
+
+❌ "Module not found: flask"
+   ✓ Run: INSTALL_DEPENDENCIES.bat
+   ✓ OR manually: pip install flask pyserial
+   ✓ If that fails, run Command Prompt as Administrator
+
+❌ "Arduino not detected / Offline"
+   ✓ Check USB cable connection
+   ✓ Install CH340 drivers (see Step 3.4 above)
+   ✓ Upload Arduino code using Arduino IDE
+   ✓ Check Device Manager for COM port
+   ✓ Verify stepper motors are connected
+
+❌ "Port 5000 already in use"
+   ✓ Close other Flask applications
+   ✓ OR modify app.py line 329:
+      Change: app.run(port=5000, ...)
+      To: app.run(port=5001, ...)
+
+❌ "Browser won't open automatically"
+   ✓ Manually open browser
+   ✓ Go to: http://127.0.0.1:5000
+   ✓ OR: http://localhost:5000
+
+═══════════════════════════════════════════════════════════════════════════
+
+FILE DESCRIPTIONS:
+═══════════════════════════════════════════════════════════════════════════
+
+📄 SINC_ROBOTICS_Braille_Embosser.bat
+   → MAIN APPLICATION LAUNCHER
+   → Double-click this to run everything!
+   → Auto-installs packages, starts server, opens browser
+
+📄 run_app.py
+   → Python launcher script
+   → Handles auto-startup, error checking
+   → Called by the .bat file
+
+📄 app.py
+   → Flask backend server
+   → Handles all braille translation logic
+   → Manages Arduino communication
+   → ~400 lines of core logic
+
+📄 index.html
+   → Web interface / UI
+   → User-friendly browser window
+   → Preview, buttons, settings
+
+📄 arduin.txt
+   → Arduino code (copy to Arduino IDE)
+   → Controls stepper motors & solenoid
+   → Processes commands from Flask
+
+📄 braille_parser.py (Optional)
+   → Advanced braille translation rules
+   → Currently integrated in app.py
+
+📄 INSTALL_DEPENDENCIES.bat
+   → Install Python packages automatically
+   → Run this once at the beginning
+
+📄 requirements.txt
+   → List of Python packages needed
+   → Used by pip install command
+
+📄 README.md
+   → Complete documentation
+   → Features, usage, troubleshooting
+
+═══════════════════════════════════════════════════════════════════════════
+
+KEYBOARD SHORTCUTS (In Application):
+═══════════════════════════════════════════════════════════════════════════
+
+F12           → Open browser developer console (for debugging)
+Ctrl+C        → Stop Flask server (close terminal window)
+Tab           → Move between input fields
+Enter         → Submit (in text area)
+
+═══════════════════════════════════════════════════════════════════════════
+
+SUPPORTED LANGUAGES:
+═══════════════════════════════════════════════════════════════════════════
+
+✓ Bengali (বাংলা)
+  → All consonants, vowels, conjuncts
+  → Punctuation marks
+  → Special characters
+
+✓ English (A-Z, a-z)
+  → Capital and lowercase letters
+  → Numbers
+  → Punctuation
+
+✓ Numbers (0-9 and ০-৯)
+  → Auto-detection with number sign
+
+═══════════════════════════════════════════════════════════════════════════
+
+FEATURES:
+═══════════════════════════════════════════════════════════════════════════
+
+✓ Single Line Printing
+✓ Multiple Line Printing (sequential)
+✓ Auto-detect line count
+✓ Poetry mode with special formatting
+✓ Real-time braille preview
+✓ Text-to-Speech (Read Aloud)
+✓ Arduino auto-detection
+✓ Status messages & error handling
+✓ Responsive web interface
+✓ Dark mode UI
+✓ Mobile-friendly design
+
+═══════════════════════════════════════════════════════════════════════════
+
+SUPPORT & CONTACT:
+═══════════════════════════════════════════════════════════════════════════
+
+For issues, check:
+1. README.md (detailed documentation)
+2. Troubleshooting section above
+3. Arduino IDE for code upload issues
+4. Device Manager for COM port detection
+5. Browser console (F12) for JavaScript errors
+
+═══════════════════════════════════════════════════════════════════════════
+
+VERSION & STATUS:
+═══════════════════════════════════════════════════════════════════════════
+
+Application Version: 1.0.0
+Release Date: December 2025
+Status: ✅ PRODUCTION READY
+
+Tested on:
+- Windows 10 / Windows 11
+- Python 3.7+
+- Arduino Uno with CNC Shield
+
+═══════════════════════════════════════════════════════════════════════════
+
+🎉 THANK YOU FOR USING SINC ROBOTICS BRAILLE EMBOSSER! 🎉
+
+═══════════════════════════════════════════════════════════════════════════
