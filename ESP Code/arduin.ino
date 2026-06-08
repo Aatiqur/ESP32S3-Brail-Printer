@@ -3,6 +3,7 @@
 #include <BLEUtils.h>
 #include <BLE2902.h>
 #include <AccelStepper.h>
+#include <soc/rtc_cntl_reg.h>   // RTC_CNTL_WDT* registers (ESP32-S3, IDF v5.5)
 
 // --- CNC Shield Pins for ESP32 ---
 // Make sure these pins match your actual ESP32 wiring to the CNC shield!
@@ -80,93 +81,78 @@ class MyCallbacks: public BLECharacteristicCallbacks {
     void onWrite(BLECharacteristic *pCharacteristic) {
       String rxValue = pCharacteristic->getValue();
       if (rxValue.length() > 0) {
-        Serial.print("⚡ CHUNK RECEIVED [");
-        Serial.print(rxValue.length());
-        Serial.print(" bytes]: ");
-        Serial.println(rxValue);
-        
         for (int i = 0; i < rxValue.length(); i++) {
           char c = rxValue[i];
-          if (c == '\n') {
-            commandReady = true;
-          } else {
-            bleBuffer += c;
-          }
+          if (c == '\n') commandReady = true;
+          else bleBuffer += c;
         }
       }
     }
 };
 
-#include <WiFi.h> // Added for WiFi control
-
 void setup() {
+  // --- 1. Serial first, so we see every subsequent line ---
   Serial.begin(115200);
-  
-  // Safely wait for USB Serial to connect (for ESP32-S3 native USB)
-  unsigned long start = millis();
-  while (!Serial && millis() - start < 3000) {
-    delay(10);
-  }
+  delay(100);
 
-  Serial.println("\n\n=== STARTING BOOT SEQUENCE ===");
-  Serial.println("0. Reducing Power Consumption...");
-  setCpuFrequencyMhz(80); // Drop CPU from 240MHz to 80MHz to save massive power
-  WiFi.mode(WIFI_OFF);    // Completely disable the WiFi radio (saves ~100mA)
+  // --- 2. Kill the hardware RTC watchdog directly (S3 + IDF v5.5 bypass) ---
+  // disableCore0WDT() is a no-op on ESP32-S3 in 3.0.x — must use register poke
+  REG_WRITE(RTC_CNTL_WDTWPROTECT_REG, RTC_CNTL_SWD_WKEY_VALUE);
+  REG_WRITE(RTC_CNTL_WDTCONFIG0_REG, 0);
+  REG_WRITE(RTC_CNTL_WDTWPROTECT_REG, 0);
 
-  Serial.println("1. Initializing Pins...");
+  Serial.println("\n=== BOOT ===");
+
+  // --- 4. Pins ---
   pinMode(SOLENOID_PIN, OUTPUT);
   pinMode(ENABLE_PIN, OUTPUT);
   digitalWrite(SOLENOID_PIN, LOW);
-  digitalWrite(ENABLE_PIN, HIGH); 
+  digitalWrite(ENABLE_PIN, HIGH);
+  Serial.println("[1/5] Pins OK");
 
-  Serial.println("2. Initializing Motors...");
+  // --- 5. Motors (at full 240 MHz - the slow clock was killing BLE init) ---
+  setCpuFrequencyMhz(240);
   stepperX.setMaxSpeed(FORWARD_MAX_SPEED);
   stepperX.setAcceleration(FORWARD_ACCEL);
   stepperY.setMaxSpeed(FORWARD_MAX_SPEED);
-  stepperY.setAcceleration(FORWARD_ACCEL);  
-  
-  Serial.println("3. Initializing BLE Device...");
-  BLEDevice::init("eBrail-Printer"); 
-  
-  Serial.println("4. Creating BLE Server...");
+  stepperY.setAcceleration(FORWARD_ACCEL);
+  Serial.println("[2/5] Motors OK");
+
+  // --- 6. BLE Device ---
+  Serial.println("[3/5] BLE init...");
+  BLEDevice::init("eBrail");
+  Serial.println("      BLE device inited");
+
+  // --- 7. BLE Server + Service ---
   pServer = BLEDevice::createServer();
   pServer->setCallbacks(new MyServerCallbacks());
-
   BLEService *pService = pServer->createService(SERVICE_UUID);
 
   pTxCharacteristic = pService->createCharacteristic(
-										CHARACTERISTIC_UUID_TX,
-										BLECharacteristic::PROPERTY_NOTIFY
-									);
+      CHARACTERISTIC_UUID_TX,
+      BLECharacteristic::PROPERTY_NOTIFY);
   pTxCharacteristic->addDescriptor(new BLE2902());
 
-  BLECharacteristic * pRxCharacteristic = pService->createCharacteristic(
-											 CHARACTERISTIC_UUID_RX,
-											 BLECharacteristic::PROPERTY_WRITE |
-                       BLECharacteristic::PROPERTY_WRITE_NR
-										);
-
+  BLECharacteristic *pRxCharacteristic = pService->createCharacteristic(
+      CHARACTERISTIC_UUID_RX,
+      BLECharacteristic::PROPERTY_WRITE |
+      BLECharacteristic::PROPERTY_WRITE_NR);
   pRxCharacteristic->setCallbacks(new MyCallbacks());
 
   pService->start();
+  Serial.println("[4/5] Service started");
 
-  // --- Optimized Advertising Setup ---
+  // --- 8. Advertising ---
   BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
   pAdvertising->addServiceUUID(SERVICE_UUID);
-  
-  // Help with iPhone/Android connection issues by setting preferred parameters
   pAdvertising->setScanResponse(true);
-  pAdvertising->setMinPreferred(0x06);  
-  pAdvertising->setMaxPreferred(0x12); 
-  
-  // Give the stack a moment to stabilize before starting
-  delay(200);
-  BLEDevice::startAdvertising();
+  pAdvertising->setMinPreferred(0x06);
+  pAdvertising->setMaxPreferred(0x12);
 
-  Serial.println("==================================================");
-  Serial.println("✅ ESP32 BRAILLE PRINTER READY");
-  Serial.println("Waiting for connection from Android App...");
-  Serial.println("==================================================");
+  delay(100);
+  BLEDevice::startAdvertising();
+  Serial.println("[5/5] Advertising as 'eBrail'");
+  Serial.println("READY");
 }
 
 void loop() {
@@ -187,9 +173,11 @@ void loop() {
     if (commandReady) {
         bleBuffer.trim();
         if (bleBuffer.length() > 0) {
-            Serial.println("\n📥 RECEIVED FULL BLE COMMAND:");
-            Serial.println(bleBuffer);
-            Serial.println("------------------------------------------------");
+            Serial.print("[RX ");
+            Serial.print(bleBuffer.length());
+            Serial.print("B] \"");
+            Serial.print(bleBuffer);
+            Serial.println("\"");
             handle_full_command(bleBuffer);
         }
         bleBuffer = "";
@@ -201,48 +189,45 @@ void handle_full_command(String command) {
     digitalWrite(ENABLE_PIN, LOW); // Enable motors
 
     if (command.startsWith("HOME")) {
+        Serial.println("CMD: HOME");
         move_stepper_with_speed(stepperX, 0, RETURN_SAFE_SPEED, RETURN_ACCEL);
         delay(100);
-        
+
         current_x = 0;
         current_y = 0;
         stepperX.setCurrentPosition(0);
         stepperY.setCurrentPosition(0);
-        
+
         stepperX.setMaxSpeed(FORWARD_MAX_SPEED);
         stepperX.setAcceleration(FORWARD_ACCEL);
-        
-        Serial.println("✅ HOME_COMPLETED");
-        if(deviceConnected) {
+
+        if (deviceConnected) {
             pTxCharacteristic->setValue("HOME_COMPLETED");
             pTxCharacteristic->notify();
         }
     }
     else if (command.startsWith("EJECT")) {
-        Serial.println("⏸️ Ejecting paper...");
-        
+        Serial.println("CMD: EJECT");
         move_stepper_with_speed(stepperY, -500, 1000.0, 300.0);
         delay(200);
-        
         move_stepper_with_speed(stepperY, 0, 1000.0, 300.0);
         current_y = 0;
         stepperY.setCurrentPosition(0);
-        
-        Serial.println("✅ PAPER_EJECTED");
-        if(deviceConnected) {
+
+        if (deviceConnected) {
             pTxCharacteristic->setValue("PAPER_EJECTED");
             pTxCharacteristic->notify();
         }
-    } 
+    }
     else if (command.startsWith("STATUS")) {
-        Serial.print("STATUS X:");
+        Serial.print("STATUS X=");
         Serial.print(current_x);
-        Serial.print(" Y:");
+        Serial.print(" Y=");
         Serial.println(current_y);
-    } 
+    }
     else {
         process_command_sequence(command);
-        if(deviceConnected) {
+        if (deviceConnected) {
             pTxCharacteristic->setValue("OK");
             pTxCharacteristic->notify();
         }
@@ -258,56 +243,66 @@ void process_command_sequence(String command) {
     }
 
     int printed_count = 0;
-    Serial.println("--- Starting Print Job ---");
-    Serial.print("Total commands: "); Serial.println(command.length());
-    Serial.print("Total dots to print: "); Serial.println(total_prints);
+    unsigned long jobT0 = millis();
+
+    Serial.print("JOB: ");
+    Serial.print(command.length());
+    Serial.print(" cmds, ");
+    Serial.print(total_prints);
+    Serial.print(" punches @ X=");
+    Serial.print(current_x);
+    Serial.print(" Y=");
+    Serial.println(current_y);
 
     for (int i = 0; i < command.length(); i++) {
         char cmd = command.charAt(i);
-        
+
         if (cmd == CMD_PRINT) {
-            Serial.println("Action: Print Dot (Solenoid Pulse)");
+            Serial.print("  ["); Serial.print(i); Serial.print("] PUNCH");
             digitalWrite(SOLENOID_PIN, HIGH);
             delay(SOLENOID_PULSE);
             digitalWrite(SOLENOID_PIN, LOW);
             delay(SOLENOID_GAP);
-            
+
             printed_count++;
             if (deviceConnected) {
                 String prog = "PROG:" + String(printed_count) + "/" + String(total_prints);
                 pTxCharacteristic->setValue(prog.c_str());
                 pTxCharacteristic->notify();
-                delay(10); // Small delay to prevent BLE congestion
+                delay(10);
             }
 
         } else if (cmd == CMD_DOT_SHIFT_X) {
+            Serial.print("  ["); Serial.print(i); Serial.print("] X+"); Serial.print(STEP_COUNT_DOT);
             current_x += STEP_COUNT_DOT;
-            Serial.print("Action: Shift X by Dot -> New X: "); Serial.println(current_x);
             move_stepper(stepperX, current_x);
 
         } else if (cmd == CMD_CELL_SHIFT) {
+            Serial.print("  ["); Serial.print(i); Serial.print("] CELL+"); Serial.print(STEP_COUNT_CELL_X);
             current_x += STEP_COUNT_CELL_X;
-            Serial.print("Action: Shift X by Cell -> New X: "); Serial.println(current_x);
             move_stepper(stepperX, current_x);
 
         } else if (cmd == CMD_Y_SHIFT_DOT_ROW) {
+            Serial.print("  ["); Serial.print(i); Serial.print("] Y+"); Serial.print(STEP_COUNT_DOT_Y);
             current_y += STEP_COUNT_DOT_Y;
-            Serial.print("Action: Shift Y by Dot Row -> New Y: "); Serial.println(current_y);
             move_stepper(stepperY, current_y);
 
         } else if (cmd == CMD_LINE_FEED) {
+            Serial.print("  ["); Serial.print(i); Serial.print("] LINE+"); Serial.print(STEP_COUNT_LINE_Y);
             current_y += STEP_COUNT_LINE_Y;
-            Serial.print("Action: Line Feed -> New Y: "); Serial.println(current_y);
             move_stepper(stepperY, current_y);
 
         } else if (cmd == CMD_GO_HOME) {
-            Serial.println("Action: X Home");
+            Serial.print("  ["); Serial.print(i); Serial.print("] HOME");
             current_x = 0;
-            move_stepper(stepperX, 0); 
+            move_stepper(stepperX, 0);
         }
     }
-    
-    Serial.println("--- Print Job Completed ---");
+
+    Serial.print("DONE: "); Serial.print(millis() - jobT0);
+    Serial.print("ms, end X="); Serial.print(current_x);
+    Serial.print(" Y="); Serial.println(current_y);
+
     if (deviceConnected) {
         pTxCharacteristic->setValue("PROG:DONE");
         pTxCharacteristic->notify();
