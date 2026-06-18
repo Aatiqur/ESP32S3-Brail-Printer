@@ -1,34 +1,70 @@
 @echo off
-REM Quick Launcher - Minimizes console window
-setlocal enabledelayedexpansion
+REM ============================================================
+REM   SINC ROBOTICS - Braille Embosser Desktop App Launcher
+REM ============================================================
+REM   This script runs the Python app IN THIS SAME window so
+REM   any error message stays visible (window won't vanish).
+REM ============================================================
+
+setlocal
 
 cd /d "%~dp0"
 
-REM Create a VBS script to run Python silently and open browser
-set VBS_SCRIPT=%TEMP%\sinc_launch.vbs
-
-(
-echo Set objShell = CreateObject("WScript.Shell"^)
-echo strPath = "%CD%"
-echo objShell.CurrentDirectory = strPath
 echo.
-echo REM Check if Python is available
-echo Dim shell, exec, output
-echo Set shell = CreateObject("WScript.Shell"^)
-echo On Error Resume Next
-echo Set exec = shell.Exec("python --version"^)
-echo output = exec.StdOut.ReadAll(^)
-echo If Err.Number ^<^> 0 Then
-echo    MsgBox "Python not found! Please install Python first." ^& vbCrLf ^& "https://www.python.org/", vbCritical, "SINC ROBOTICS"
-echo    WScript.Quit
-echo End If
-echo On Error GoTo 0
+echo ============================================================
+echo   SINC ROBOTICS - Braille Embosser Desktop Application
+echo ============================================================
 echo.
-echo REM Run the application
-echo shell.Run "python run_app.py", 1, False
-) > "!VBS_SCRIPT!"
 
-cscript.exe "!VBS_SCRIPT!"
-del "!VBS_SCRIPT!" 2>nul
+REM ---- 1. Check that Python is installed and in PATH ----
+python --version >nul 2>&1
+if errorlevel 1 (
+    echo [ERROR] Python is not installed or not in PATH.
+    echo.
+    echo Please install Python 3.10+ from:
+    echo     https://www.python.org/downloads/
+    echo.
+    echo IMPORTANT: Check the box "Add Python to PATH" during install.
+    echo.
+    pause
+    exit /b 1
+)
 
+echo [OK] Python found:
+python --version
+echo.
+
+REM ---- 2. Install missing packages if needed ----
+echo [INFO] Checking required packages (flask, pyserial)...
+python -m pip install --quiet flask pyserial
+if errorlevel 1 (
+    echo.
+    echo [WARNING] pip install failed. Trying again with output visible...
+    python -m pip install flask pyserial
+    if errorlevel 1 (
+        echo.
+        echo [ERROR] Could not install required packages.
+        echo Try running:  python -m pip install flask pyserial
+        echo.
+        pause
+        exit /b 1
+    )
+)
+echo [OK] Packages ready.
+echo.
+
+REM ---- 3. Launch the application (this BLOCKS until app closes) ----
+echo [INFO] Starting application...
+echo        A browser window will open at http://127.0.0.1:5000
+echo        Press Ctrl+C in this window to stop the server.
+echo.
+
+python run_app.py
+
+REM ---- 4. Keep the window open after the app exits ----
+echo.
+echo ============================================================
+echo   Application stopped.
+echo ============================================================
+pause
 endlocal
