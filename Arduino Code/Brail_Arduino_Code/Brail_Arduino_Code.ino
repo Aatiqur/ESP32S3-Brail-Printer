@@ -17,7 +17,7 @@ AccelStepper stepperY(1, Y_STEP_PIN, Y_DIR_PIN);
 const int STEP_COUNT_DOT = 10;      // 2.5 mm dot-to-dot
 const int STEP_COUNT_CELL_X = 15;   // 3.5 mm cell-to-cell
 const int STEP_COUNT_DOT_Y = 10;    // 2.5 mm dot-row spacing
-const int STEP_COUNT_LINE_Y = 15;   // 5.0 mm line spacing
+const int STEP_COUNT_LINE_Y = 20;   // 5.0 mm line spacing
 
 // --- Printer State ---
 long current_x = 0;

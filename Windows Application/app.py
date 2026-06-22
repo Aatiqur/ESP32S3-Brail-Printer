@@ -233,75 +233,119 @@ def build_single_line_command(line_text, is_poetry=False):
     return final_command
 
 
+ARDUINO_VID_PIDS = {
+    # Common Arduino / clone USB-serial chip IDs
+    0x2341,  # Arduino Uno/Mega (ATmega16U2)
+    0x0043,  # Arduino Uno (alternate)
+    0x1A86,  # CH340/CH341 (generic clones)
+    0x7523,  # CH340 (some variants)
+    0x0403,  # FTDI FT232
+    0x6001,  # FTDI (alt)
+    0x239A,  # Adafruit / some ESP32-S3 dev boards in CDC mode
+    0x303A,  # Espressif native USB (ESP32-S2/S3)
+    0x10C4,  # CP210x
+    0x067B,  # PL2303
+}
+
+
 def find_arduino_port():
+    """Return the first COM port that looks like an Arduino/clone/ESP32."""
     ports = serial.tools.list_ports.comports()
+    # Pass 1: match by VID/PID (most reliable)
     for port in ports:
-        if "Arduino" in port.description or "CH340" in port.description:
+        if port.vid is not None and port.vid in ARDUINO_VID_PIDS:
+            return port.device
+    # Pass 2: match by description text
+    for port in ports:
+        desc = (port.description or "").lower()
+        if any(k in desc for k in ("arduino", "ch340", "ch341", "usb-serial", "esp32", "cp210", "ftdi", "usb serial")):
+            return port.device
+    # Pass 3: skip Bluetooth and return the first remaining port
+    for port in ports:
+        desc = (port.description or "").lower()
+        if "bluetooth" not in desc:
             return port.device
     return None
 
 
 def connect_arduino():
     global arduino
-    port = find_arduino_port()
-    if port:
+    if arduino is not None:
         try:
-            arduino = serial.Serial(port, 115200, timeout=2)
-            time.sleep(2)
-            print(f"✅ Connected to Arduino on {port}")
-        except Exception as e:
-            print(f"❌ Connection error: {e}")
-            arduino = None
-    else:
-        print("❌ Arduino not found")
+            arduino.close()
+        except Exception:
+            pass
+        arduino = None
+    port = find_arduino_port()
+    if not port:
+        print("❌ Arduino not found on any COM port")
+        return False
+    try:
+        arduino = serial.Serial(port, 115200, timeout=2, write_timeout=5)
+        # Wait for Arduino reset (DTR pulse from pyserial triggers bootloader)
+        time.sleep(2)
+        # Drain any boot-time garbage
+        try:
+            arduino.reset_input_buffer()
+            arduino.reset_output_buffer()
+        except Exception:
+            pass
+        print(f"✅ Connected to Arduino on {port}")
+        return True
+    except serial.SerialException as e:
+        print(f"❌ Could not open {port}: {e}")
+        print("   -> Is Arduino IDE Serial Monitor / another app using this port?")
+        arduino = None
+        return False
+    except Exception as e:
+        print(f"❌ Connection error: {e}")
+        arduino = None
+        return False
 
 
 def send_command(command):
-    """Send command and wait for response"""
+    """Send command and wait for response. Auto-reconnects once on permission errors."""
     global arduino
-    if not arduino: 
-        connect_arduino()
-    if not arduino: 
-        return "❌ Offline"
-    
-    try:
-        # Clear buffers
+    if arduino is None:
+        if not connect_arduino():
+            return "❌ Offline (no Arduino)"
+
+    def _attempt(attempt_label):
         arduino.reset_input_buffer()
         arduino.reset_output_buffer()
         time.sleep(0.05)
-        
-        # Send command
-        print(f"[SEND] Command length: {len(command)}")
+        print(f"[SEND {attempt_label}] Command length: {len(command)}")
         arduino.write((command + '\n').encode())
         arduino.flush()
-        
-        # Wait for response - FIXED VERSION
+
         timeout = 120
         start = time.time()
         buffer = ""
-        
         while time.time() - start < timeout:
             if arduino.in_waiting > 0:
                 try:
                     data = arduino.read(arduino.in_waiting).decode(errors='ignore')
                     buffer += data
-                    
                     if data.strip():
                         print(f"[RECV] {data.strip()}")
-                    
-                    # Check for completion
                     if "DONE" in buffer or "LINE_COMPLETE" in buffer or "OK" in buffer:
                         print(f"[SUCCESS] Received completion signal")
                         return "✅"
-                    
-                except:
+                except Exception:
                     pass
-            
-            time.sleep(0.05)  # Check every 50ms
-        
-        print(f"[TIMEOUT] No response after {timeout}s")
+            time.sleep(0.05)
         return "⚠️ Timeout"
-        
+
+    try:
+        return _attempt("1st")
+    except (serial.SerialException, PermissionError, OSError) as e:
+        print(f"[WARN] First send failed ({e}); reconnecting...")
+        if not connect_arduino():
+            return f"❌ {e}"
+        try:
+            return _attempt("retry")
+        except Exception as e2:
+            return f"❌ {e2}"
     except Exception as e:
         print(f"[ERROR] {e}")
         return f"❌ {e}"
@@ -314,6 +358,26 @@ def home():
             return f.read()
     except:
         return "Missing index.html"
+
+
+@app.route('/status')
+def status():
+    """Return Arduino connection status and detected ports."""
+    global arduino
+    ports_info = []
+    for p in serial.tools.list_ports.comports():
+        ports_info.append({
+            "device": p.device,
+            "description": p.description,
+            "vid": f"0x{p.vid:04X}" if p.vid else None,
+            "pid": f"0x{p.pid:04X}" if p.pid else None,
+        })
+    connected = arduino is not None and arduino.is_open
+    return jsonify({
+        "connected": connected,
+        "port": arduino.port if connected else None,
+        "ports": ports_info,
+    })
 
 
 @app.route('/print-lines', methods=['POST'])
